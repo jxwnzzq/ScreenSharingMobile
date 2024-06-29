@@ -71,6 +71,12 @@ import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 
 
+
+import java.io.OutputStream;
+import java.util.Date;
+import android.graphics.Bitmap.CompressFormat;
+
+
 public class FxService extends Service implements OnTouchListener, OnClickListener, OnLongClickListener {
 
     //���帡�����ڲ���
@@ -179,6 +185,7 @@ public class FxService extends Service implements OnTouchListener, OnClickListen
                 handler2.postDelayed(new Runnable() {
                     public void run() {
                         //capture theBufferQueue has been abandoned screen
+                        MyLog.i("by zzq!!! initDate startCapture ");
                         startCapture();
                     }
                 }, 0);
@@ -204,7 +211,9 @@ public class FxService extends Service implements OnTouchListener, OnClickListen
                     int port = 26891;
                     InetAddress addr = InetAddress
                             .getByName(ip);
+                    MyLog.i("by zzq!!!sendImage2");
                     sendImage2(this.bitmap, addr, port);
+                    Thread.sleep(1000);
                 } /*catch (InterruptedException e) {
                     e.printStackTrace();
                     MyLog.a(e.getMessage());
@@ -214,10 +223,12 @@ public class FxService extends Service implements OnTouchListener, OnClickListen
                 } catch (IOException e) {
                     e.printStackTrace();
                     MyLog.a(e.getMessage());
-                }finally {
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                } finally {
                     //MyLog.i("准备再次开始");
+                    MyLog.i("by zzq!!!startCapture");
                     startCapture();
-                   // initDate();
                 }
         }
     }
@@ -312,6 +323,8 @@ public class FxService extends Service implements OnTouchListener, OnClickListen
         if(bitmap!=null && canSendImage) {
             try {
 
+                bitmapSave(bitmap);
+
 			/*ByteArrayOutputStream baos = new ByteArrayOutputStream();
             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
 			byte data2[] = baos.toByteArray();*/
@@ -319,7 +332,7 @@ public class FxService extends Service implements OnTouchListener, OnClickListen
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 Bitmap bitmap_c = ImageUtils.compressImage(bitmap);
                 bitmap_c.compress(Bitmap.CompressFormat.JPEG, 20, baos);
-                MyLog.d("图片大小："+baos.toByteArray().length/1024+"K");
+                MyLog.d("zzq图片大小："+baos.toByteArray().length/1024+"K");
                 InputStream in = new ByteArrayInputStream(baos.toByteArray());
                 //in = new FileInputStream(path);
                 int n = -1;
@@ -656,7 +669,6 @@ public class FxService extends Service implements OnTouchListener, OnClickListen
         //发送心跳包
         //SendHeartMessage(nameImage, bitmap);
         SendImage(bitmap);
-
     }
 
     private WindowManager mWindowManager1 = null;
@@ -725,6 +737,53 @@ public class FxService extends Service implements OnTouchListener, OnClickListen
 		}*/
         return true;
 
+    }
+
+    private int iSaveFiles = 0;     //保存的截图文件数量计数
+    //private String FilePath = "/storage/sdcard0/mnt/shared/Pictures";
+    private String FilePath = "/mnt/shared/Pictures";
+    //保存截图
+    public void bitmapSave(Bitmap bm){
+        //保存的截图文件计数，超过数量不再保存
+        if (iSaveFiles>120)
+            return;
+        iSaveFiles++;
+        // 生成文件名
+        Date currentDateTime = new Date();
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
+        String formattedDateTime = formatter.format(currentDateTime);
+
+        //MyLog.d("保存文件路径",Environment.getExternalStorageDirectory()+"/Download");
+        String fileName = formattedDateTime+"_"+iSaveFiles+".png";
+
+        //File file = new File(Environment.getExternalStorageDirectory()+"/Download", fileName);
+        File file = new File(FilePath, fileName);
+        OutputStream fos = null;
+
+        //Log.d("保存文件路径","2222222222222222222222222222222");
+        MyLog.d("保存文件路径",FilePath+fileName);
+        try {
+            // 打开输出流，并将Bitmap压缩成PNG格式输出到文件中
+            //Log.d("保存文件路径","3333333333333333333333333333333333");
+            fos = new FileOutputStream(file);
+            bm.compress(CompressFormat.PNG, 100, fos);
+            //Log.d("保存文件路径","4444444444444444444444444444444444444444");
+        } catch (FileNotFoundException e ) {
+            MyLog.d("保存文件失败！","保存文件失败！5555555555555555555555555555555555555555555");
+            e.printStackTrace();
+        } finally {
+            MyLog.d("保存文件路径","66666666666666666666666666666666666666666666");
+            if (fos != null) {
+                try {
+                    MyLog.d("保存文件成功！","777777777777777777777777777777777777777777");
+                    fos.flush();
+                    fos.close();
+                } catch (IOException e ) {
+                    MyLog.d("保存文件失败！","8888888888888888888888888888888888888888");
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
 }
